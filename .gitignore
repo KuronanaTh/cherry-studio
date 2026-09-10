@@ -1,15 +1,3 @@
-# Project-local build toolchain
-temp
-.toolchain
-build_cherry_portable.bat
-dev_cherry_portable.bat
-i18n_cherry_portable.bat
-update_cherry_portable.bat
-PORTABLE.md
-scripts/i18n-coverage.cjs
-scripts/i18n-preflight.cjs
-*.bak
-
 # Logs
 logs
 *.log
