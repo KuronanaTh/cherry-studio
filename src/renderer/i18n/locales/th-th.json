@@ -3395,7 +3395,6 @@
   "selection.settings.filter_modal.user_tips.mac": "กรุณาป้อน Bundle ID ของแอปพลิเคชัน บรรทัดละหนึ่งรายการ ไม่สนตัวพิมพ์เล็ก-ใหญ่ สามารถจับคู่แบบคลุมเครือ เช่น com.google.Chrome, com.apple.mail ฯลฯ",
   "selection.settings.filter_modal.user_tips.windows": "กรุณาป้อนชื่อไฟล์ปฏิบัติการของแอปพลิเคชัน บรรทัดละหนึ่งรายการ ไม่สนตัวพิมพ์เล็ก-ใหญ่ สามารถจับคู่แบบคลุมเครือ เช่น chrome.exe, weixin.exe, CherryStudio.exe ฯลฯ",
   "selection.settings.linux.compositor_incompatible": "สภาพแวดล้อมเดสก์ท็อปของคุณไม่รองรับฟีเจอร์การเลือก กรุณาสลับไปใช้เซสชัน X11 เพื่อประสบการณ์เต็มรูปแบบ",
-  "selection.settings.linux.filter_warning_text": "ไม่พร้อมใช้งานในเซสชัน Wayland",
   "selection.settings.linux.input_group_fail": "ยังไม่ได้ให้สิทธิ์ กรุณารัน `sudo usermod -aG input $USER` และเข้าสู่ระบบใหม่",
   "selection.settings.linux.input_group_label": "สิทธิ์กลุ่มอินพุต: ",
   "selection.settings.linux.input_group_pass": "ให้สิทธิ์แล้ว",
