@@ -9,6 +9,13 @@ packageExtensions:
     dependencies:
       debug: "4.4.3"
       devlop: "1.1.0"
+  # LOCAL BUILD FIX: remote-protocol's dist imports zod at runtime but declares it only as
+  # a peerDependency, so production installs (and electron-builder's asar packing) ship
+  # without it and the packaged app crashes on start with ERR_MODULE_NOT_FOUND 'zod'.
+  # Declaring it here makes pnpm install a real copy next to the package.
+  "@cherrystudio/remote-protocol@*":
+    dependencies:
+      zod: "4.4.3"
 
 overrides:
   picomatch: "4.0.4"
