@@ -635,7 +635,10 @@ const Sessions = ({
   const agentById = useMemo(() => new Map(agentsForDisplay.map((agent) => [agent.id, agent])), [agentsForDisplay])
   const getSessionExportOptions = useCallback(
     (session: AgentSessionEntity): AgentSessionExportOptions => ({
-      modelFallback: getAgentModelFallbackSnapshot(session.agentId ? agentById.get(session.agentId) : undefined)
+      modelFallback: getAgentModelFallbackSnapshot(
+        session.agentId ? agentById.get(session.agentId) : undefined,
+        session.model
+      )
     }),
     [agentById]
   )
@@ -2297,7 +2300,7 @@ const Sessions = ({
             <AgentSessionImageCaptureHost
               key={requestId}
               activeAgent={activeAgent}
-              modelFallback={getAgentModelFallbackSnapshot(activeAgent)}
+              modelFallback={getAgentModelFallbackSnapshot(activeAgent, session.model)}
               session={session}
             />
           )
