@@ -573,10 +573,11 @@ const AgentChat = ({
               </label>
             </div>
             {sessionSnapshot?.model && (
+              // Quiet link-style affordance — must not read as a primary action.
               <Button
                 variant="ghost"
                 size="sm"
-                className="mt-2"
+                className="mt-2 w-fit px-0 text-xs text-muted-foreground underline-offset-4 hover:underline"
                 onClick={async () => {
                   if (!sessionSnapshot) return
                   await updateSession({ id: sessionSnapshot.id, model: null }, { showSuccessToast: false })
