@@ -106,6 +106,8 @@ function rowToSession(row: JoinedSessionRow): AgentSessionEntity {
     name: clean.name,
     isNameManuallyEdited: clean.isNameManuallyEdited,
     description: clean.description,
+    // Per-session model override; null = inherit the parent agent's model.
+    model: row.session.model ?? null,
     workspaceId: clean.workspaceId,
     workspace: rowToAgentWorkspace(row.workspace),
     traceId: clean.traceId,
@@ -821,6 +823,7 @@ export class AgentSessionService {
     }
     if (dto.description !== undefined) patch.description = dto.description
     if (dto.agentId !== undefined) patch.agentId = dto.agentId
+    if (dto.model !== undefined) patch.model = dto.model
     if (Object.keys(patch).length === 0) return this.getById(id)
 
     const result = withSqliteErrors(

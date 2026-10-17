@@ -11,11 +11,14 @@ import { agentSessionTable } from '@data/db/schemas/agentSession'
 import { agentSessionMessageTable } from '@data/db/schemas/agentSessionMessage'
 import { agentWorkspaceTable } from '@data/db/schemas/agentWorkspace'
 import { pinTable } from '@data/db/schemas/pin'
+import { userModelTable } from '@data/db/schemas/userModel'
+import { userProviderTable } from '@data/db/schemas/userProvider'
 import { agentSessionService } from '@data/services/AgentSessionService'
 import { agentTaskService } from '@data/services/AgentTaskService'
 import { agentWorkspaceService } from '@data/services/AgentWorkspaceService'
 import { jobScheduleService } from '@data/services/JobScheduleService'
 import { pinService } from '@data/services/PinService'
+import { generateOrderKeyBetween } from '@data/services/utils/orderKey'
 import { ErrorCode } from '@shared/data/api/errors'
 import type { AgentWorkspaceEntity } from '@shared/data/api/schemas/agentWorkspaces'
 
@@ -667,6 +670,57 @@ describe('AgentSessionService', () => {
       ])
       expect(notifyDataApiDataChangeMock).toHaveBeenNthCalledWith(2, [{ endpoint: '/pins', kind: 'membership' }])
       expect(notifyDataApiDataChangeMock).toHaveBeenCalledTimes(2)
+    })
+  })
+
+  describe('session model override', () => {
+    async function seedOverrideModel(id: string): Promise<void> {
+      await dbh.db
+        .insert(userProviderTable)
+        .values({ providerId: 'openai', name: 'openai', orderKey: generateOrderKeyBetween(null, null) })
+        .onConflictDoNothing()
+      await dbh.db
+        .insert(userModelTable)
+        .values({
+          id,
+          providerId: 'openai',
+          modelId: 'gpt-5',
+          name: 'GPT-5',
+          capabilities: [],
+          supportsStreaming: true,
+          orderKey: generateOrderKeyBetween(null, null)
+        })
+        .onConflictDoNothing()
+    }
+
+    it('persists the model in update() and projects it on the entity', async () => {
+      const session = await createSession('override')
+      await seedOverrideModel('openai::gpt-5')
+
+      const updated = agentSessionService.update(session.id, { model: 'openai::gpt-5' })
+
+      expect(updated.model).toBe('openai::gpt-5')
+      const reloaded = agentSessionService.getById(session.id)
+      expect(reloaded.model).toBe('openai::gpt-5')
+    })
+
+    it('clears the override with a null patch so the session inherits the agent model', async () => {
+      const session = await createSession('clear-override')
+      await seedOverrideModel('openai::gpt-5')
+      agentSessionService.update(session.id, { model: 'openai::gpt-5' })
+
+      const cleared = agentSessionService.update(session.id, { model: null })
+
+      expect(cleared.model).toBe(null)
+      const reloaded = agentSessionService.getById(session.id)
+      expect(reloaded.model).toBe(null)
+    })
+
+    it('leaves new sessions inheriting (model null) when create does not set it', async () => {
+      const session = await createSession('inherit')
+
+      const reloaded = agentSessionService.getById(session.id)
+      expect(reloaded.model).toBe(null)
     })
   })
 
