@@ -30,10 +30,14 @@ interface ConfirmDialogProps {
   cancelDisabled?: boolean
   /** Return false to keep the dialog open; void or true closes it. */
   onConfirm?: () => boolean | void | Promise<boolean | void>
-  /** Optional secondary action button text (rendered before cancel). */
+  /** Optional secondary action button text. When present the footer reads
+   * [secondary] [confirm] [cancel] with cancel rightmost; without it the
+   * default [cancel] [confirm] order is unchanged. */
   secondaryActionText?: string
   /** Return false to keep the dialog open; void or true closes it. */
   onSecondaryAction?: () => boolean | void | Promise<boolean | void>
+  /** Optional quiet affordance (e.g. a reset link) pinned to the footer's start edge. */
+  footerStart?: React.ReactNode
   /** Whether this is a destructive action (e.g., delete) */
   destructive?: boolean
   /** Loading state for confirm button */
@@ -58,6 +62,7 @@ function ConfirmDialog({
   onConfirm,
   secondaryActionText,
   onSecondaryAction,
+  footerStart,
   destructive = false,
   confirmLoading = false,
   confirmDisabled = false,
@@ -87,23 +92,41 @@ function ConfirmDialog({
         </DialogHeader>
         {content}
         <DialogFooter>
-          {secondaryActionText && onSecondaryAction && (
-            <Button variant="ghost" onClick={handleSecondaryAction}>
-              {secondaryActionText}
-            </Button>
+          {footerStart && <div className="mr-auto flex items-center">{footerStart}</div>}
+          {secondaryActionText && onSecondaryAction ? (
+            <>
+              <Button variant="ghost" onClick={handleSecondaryAction}>
+                {secondaryActionText}
+              </Button>
+              <Button
+                variant={destructive ? 'destructive' : 'default'}
+                onClick={handleConfirm}
+                loading={confirmLoading}
+                disabled={confirmDisabled}>
+                {confirmText}
+              </Button>
+              <DialogClose asChild>
+                <Button variant="outline" disabled={cancelDisabled}>
+                  {cancelText}
+                </Button>
+              </DialogClose>
+            </>
+          ) : (
+            <>
+              <DialogClose asChild>
+                <Button variant="outline" disabled={cancelDisabled}>
+                  {cancelText}
+                </Button>
+              </DialogClose>
+              <Button
+                variant={destructive ? 'destructive' : 'default'}
+                onClick={handleConfirm}
+                loading={confirmLoading}
+                disabled={confirmDisabled}>
+                {confirmText}
+              </Button>
+            </>
           )}
-          <DialogClose asChild>
-            <Button variant="outline" disabled={cancelDisabled}>
-              {cancelText}
-            </Button>
-          </DialogClose>
-          <Button
-            variant={destructive ? 'destructive' : 'default'}
-            onClick={handleConfirm}
-            loading={confirmLoading}
-            disabled={confirmDisabled}>
-            {confirmText}
-          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
