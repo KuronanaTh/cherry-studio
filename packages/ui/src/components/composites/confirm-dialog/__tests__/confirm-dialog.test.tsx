@@ -152,9 +152,16 @@ describe('ConfirmDialog', () => {
         onSecondaryAction={() => undefined}
       />
     )
-    // With a secondary action: [secondary] [cancel] [confirm].
+    // With a secondary action: [secondary] [confirm] [cancel] — cancel rightmost.
     expect(footerButtons()[0]).toHaveTextContent('Secondary')
-    expect(footerButtons()[1]).toHaveTextContent('Cancel')
-    expect(footerButtons()[2]).toHaveTextContent('Confirm')
+    expect(footerButtons()[1]).toHaveTextContent('Confirm')
+    expect(footerButtons()[2]).toHaveTextContent('Cancel')
+  })
+
+  it('honors confirmVariant for the confirm button', () => {
+    render(<ConfirmDialog open title="Confirm action" confirmText="Confirm" confirmVariant="ghost" />)
+
+    const confirmButton = screen.getByRole('button', { name: 'Confirm' })
+    expect(confirmButton).toHaveClass('hover:bg-accent')
   })
 })

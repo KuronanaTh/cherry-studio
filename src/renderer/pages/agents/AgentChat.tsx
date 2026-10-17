@@ -575,22 +575,26 @@ const AgentChat = ({
             {sessionSnapshot?.model && (
               // Own row above the footer: reseting the override is the
               // highlighted choice when a session has its own model.
-              <Button
-                variant="default"
-                size="sm"
-                className="mt-3 w-full"
-                onClick={async () => {
-                  if (!sessionSnapshot) return
-                  await updateSession({ id: sessionSnapshot.id, model: null }, { showSuccessToast: false })
-                  setModelSwitchConfirmOpen(false)
-                }}>
-                {t('agent.session.model_switch_confirm.reset_to_agent_default')}
-              </Button>
+              <div className="min-w-0">
+                <Button
+                  variant="default"
+                  size="sm"
+                  className="w-full"
+                  onClick={async () => {
+                    if (!sessionSnapshot) return
+                    await updateSession({ id: sessionSnapshot.id, model: null }, { showSuccessToast: false })
+                    setModelSwitchConfirmOpen(false)
+                  }}>
+                  {t('agent.session.model_switch_confirm.reset_to_agent_default')}
+                </Button>
+              </div>
             )}
           </>
         }
-        // Primary: pin the picked model to this session only.
+        // Primary: pin the picked model to this session only (unstyled on purpose —
+        // the highlighted choice is the reset row above).
         confirmText={t('agent.session.model_switch_confirm.confirm_session')}
+        confirmVariant="ghost"
         // Secondary: the previous behavior — switch the agent's model for all
         // its sessions. The skip checkbox only applies to this path.
         secondaryActionText={t('agent.session.model_switch_confirm.confirm_agent')}
