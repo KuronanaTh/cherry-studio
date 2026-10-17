@@ -5033,6 +5033,7 @@
   "settings.profile.title": "ข้อมูลส่วนตัว",
   "settings.prompts.add": "เพิ่มพรอมต์",
   "settings.prompts.binding.bind": "ผูกพรอมต์",
+  "settings.prompts.binding.globalDescription": "พรอมต์แบบ Global พร้อมใช้งานในทุกบทสนทนา และจัดการได้จากหน้าการตั้งค่า",
   "settings.prompts.binding.manageTargets": "จัดการเป้าหมายสำหรับ {{title}}",
   "settings.prompts.binding.noLinked": "ไม่มีพรอมต์ที่เชื่อมโยง",
   "settings.prompts.binding.noMore": "ไม่มีพรอมต์เพิ่มเติม",
