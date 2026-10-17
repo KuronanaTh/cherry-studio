@@ -34,6 +34,8 @@ interface AgentComposerSlotProps {
   isStreaming: boolean
   sendDisabled: boolean
   onAgentChange?: (agentId: string | null) => void | Promise<void>
+  /** Model-change override; see AgentComposer Props.onModelSelect. */
+  onModelSelect?: (model: Model) => void | Promise<void>
   agentChanging?: boolean
   onCreateEmptySession?: () => void | Promise<unknown>
   composerContext: ComposerContextValue
@@ -58,6 +60,7 @@ function AgentComposerSlot({
   isStreaming,
   sendDisabled,
   onAgentChange,
+  onModelSelect,
   agentChanging,
   onCreateEmptySession,
   composerContext,
@@ -109,6 +112,7 @@ function AgentComposerSlot({
         isStreaming={!isEditing && isStreaming}
         sendDisabled={binary.blocked || sendDisabled || (isEditing && (isStreaming || editBusy))}
         onCreateEmptySession={isEditing ? undefined : onCreateEmptySession}
+        onModelSelect={onModelSelect}
         compactWhenSingleLine={compactWhenSingleLine}
         previewInputFile={
           rightPaneActions?.canPreviewInputFileInRightPane ? rightPaneActions.previewInputFileInRightPane : undefined
