@@ -558,35 +558,36 @@ const AgentChat = ({
         title={t('agent.session.model_switch_confirm.title', { model: modelSwitchTarget?.model.name ?? '' })}
         description={t('agent.session.model_switch_confirm.description')}
         content={
-          <div className="flex items-center gap-2">
-            <Checkbox
-              id="skip-model-switch-confirmation"
-              size="sm"
-              checked={skipModelSwitchConfirmation}
-              onCheckedChange={(checked) => setSkipModelSwitchConfirmation(checked === true)}
-            />
-            <label
-              htmlFor="skip-model-switch-confirmation"
-              className="cursor-pointer text-sm leading-none text-foreground">
-              {t('agent.session.model_switch_confirm.skip_for_app_run')}
-            </label>
-          </div>
-        }
-        footerStart={
-          sessionSnapshot?.model ? (
-            // Quiet link-style affordance pinned to the footer's start edge.
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-auto w-fit px-0 text-xs font-normal text-muted-foreground underline-offset-4 hover:underline"
-              onClick={async () => {
-                if (!sessionSnapshot) return
-                await updateSession({ id: sessionSnapshot.id, model: null }, { showSuccessToast: false })
-                setModelSwitchConfirmOpen(false)
-              }}>
-              {t('agent.session.model_switch_confirm.reset_to_agent_default')}
-            </Button>
-          ) : undefined
+          <>
+            <div className="flex items-center gap-2">
+              <Checkbox
+                id="skip-model-switch-confirmation"
+                size="sm"
+                checked={skipModelSwitchConfirmation}
+                onCheckedChange={(checked) => setSkipModelSwitchConfirmation(checked === true)}
+              />
+              <label
+                htmlFor="skip-model-switch-confirmation"
+                className="cursor-pointer text-sm leading-none text-foreground">
+                {t('agent.session.model_switch_confirm.skip_for_app_run')}
+              </label>
+            </div>
+            {sessionSnapshot?.model && (
+              // Own row above the footer: reseting the override is the
+              // highlighted choice when a session has its own model.
+              <Button
+                variant="default"
+                size="sm"
+                className="mt-3 w-full"
+                onClick={async () => {
+                  if (!sessionSnapshot) return
+                  await updateSession({ id: sessionSnapshot.id, model: null }, { showSuccessToast: false })
+                  setModelSwitchConfirmOpen(false)
+                }}>
+                {t('agent.session.model_switch_confirm.reset_to_agent_default')}
+              </Button>
+            )}
+          </>
         }
         // Primary: pin the picked model to this session only.
         confirmText={t('agent.session.model_switch_confirm.confirm_session')}
