@@ -30,6 +30,10 @@ interface ConfirmDialogProps {
   cancelDisabled?: boolean
   /** Return false to keep the dialog open; void or true closes it. */
   onConfirm?: () => boolean | void | Promise<boolean | void>
+  /** Optional secondary action button text (rendered before cancel). */
+  secondaryActionText?: string
+  /** Return false to keep the dialog open; void or true closes it. */
+  onSecondaryAction?: () => boolean | void | Promise<boolean | void>
   /** Whether this is a destructive action (e.g., delete) */
   destructive?: boolean
   /** Loading state for confirm button */
@@ -52,6 +56,8 @@ function ConfirmDialog({
   cancelText = 'Cancel',
   cancelDisabled = false,
   onConfirm,
+  secondaryActionText,
+  onSecondaryAction,
   destructive = false,
   confirmLoading = false,
   confirmDisabled = false,
@@ -62,6 +68,11 @@ function ConfirmDialog({
     const result = await onConfirm?.()
     if (result !== false) onOpenChange?.(false)
   }, [onConfirm, onOpenChange])
+
+  const handleSecondaryAction = React.useCallback(async () => {
+    const result = await onSecondaryAction?.()
+    if (result !== false) onOpenChange?.(false)
+  }, [onSecondaryAction, onOpenChange])
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -76,6 +87,11 @@ function ConfirmDialog({
         </DialogHeader>
         {content}
         <DialogFooter>
+          {secondaryActionText && onSecondaryAction && (
+            <Button variant="ghost" onClick={handleSecondaryAction}>
+              {secondaryActionText}
+            </Button>
+          )}
           <DialogClose asChild>
             <Button variant="outline" disabled={cancelDisabled}>
               {cancelText}

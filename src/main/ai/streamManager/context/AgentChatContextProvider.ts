@@ -15,6 +15,7 @@ import { AgentSessionEditError } from '@data/services/AgentSessionEditError'
 import { AgentSessionDeliveryRoutingError, agentSessionMessageService } from '@data/services/AgentSessionMessageService'
 import { getAgentSessionHead } from '@data/services/agentSessionMessageTree'
 import { agentSessionService } from '@data/services/AgentSessionService'
+import { modelService } from '@data/services/ModelService'
 import type { NotifyChannel } from '@main/ai/runtime/agentMcpServers'
 import { reservePiBranchTx } from '@main/ai/runtime/pi/piContext'
 import { topicNamingService } from '@main/services/TopicNamingService'
@@ -122,9 +123,6 @@ export class AgentChatContextProvider implements ChatContextProvider {
     if (!agent) {
       throw new AgentSessionDeliveryRoutingError('TARGET_UNAVAILABLE', `Agent not found for Session ${sessionId}`)
     }
-    if (!agent.model) {
-      throw new AgentSessionDeliveryRoutingError('TARGET_UNAVAILABLE', `Agent ${agent.id} has no model configured`)
-    }
 
     const driver = runtimeDriverRegistry.getAgentSessionDriver(agent.type)
     if (!driver) {
@@ -141,11 +139,29 @@ export class AgentChatContextProvider implements ChatContextProvider {
       throw new Error('Invalid durable agent delivery message')
     }
 
-    const uniqueModelId = agent.model
+    // Session-level model override wins over the agent's base model; null
+    // inherits dynamically so an agent model change reaches sessions without
+    // an override (mirrors the req.reasoningEffort ?? configuration fallback).
+    const uniqueModelId = session.model ?? agent.model
+    if (!uniqueModelId) {
+      throw new AgentSessionDeliveryRoutingError(
+        'TARGET_UNAVAILABLE',
+        `Agent ${agent.id} and Session ${sessionId} have no model configured`
+      )
+    }
     const { providerId, modelId: rawModelId } = parseUniqueModelId(uniqueModelId)
     const shouldAutoNameInitialTurn = deliveryMessage
       ? !agentSessionMessageService.hasSessionMessages(sessionId, deliveryMessage.id)
       : !agentSessionMessageService.hasSessionMessages(sessionId)
+    // When the session override differs from the agent's base model, resolve the
+    // display name for the frozen message snapshot; otherwise reuse the agent's
+    // projected name without the extra lookup.
+    const modelName =
+      session.model && session.model !== agent.model
+        ? (modelService
+            .getNamesByUniqueIdsTx(application.get('DbService').getDb(), [uniqueModelId])
+            .get(uniqueModelId) ?? rawModelId)
+        : (agent.modelName ?? rawModelId)
     return {
       sessionId,
       parentMessageId,
@@ -167,7 +183,7 @@ export class AgentChatContextProvider implements ChatContextProvider {
         name: agent.name,
         // Normalized effective avatar (mirrors renderer `getAgentAvatar`).
         emoji: agent.configuration?.avatar?.trim() || '🤖',
-        model: { id: rawModelId, name: agent.modelName ?? rawModelId, provider: providerId }
+        model: { id: rawModelId, name: modelName, provider: providerId }
       },
       userMessageId: deliveryMessage?.id ?? uuidv7(),
       userMessageParts: deliveryMessage?.data.parts ?? req.userMessageParts ?? [],
