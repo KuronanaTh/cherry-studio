@@ -2,9 +2,10 @@
  * DataApi-backed session queries and data mutations; lifecycle commands use IpcApi.
  *
  * Sessions are pure agent instances — only `id / agentId / name / description /
- * orderKey / timestamps` live here. For config (model / instructions /
- * configuration / ...) call {@link import('./useAgent').useAgent}
- * with `session.agentId`.
+ * orderKey / timestamps` live here. The one exception is `model`: an optional
+ * per-session model override (null = inherit the parent agent's model). For the
+ * remaining config (instructions / configuration / ...) call
+ * {@link import('./useAgent').useAgent} with `session.agentId`.
  */
 
 import { isEqual } from 'es-toolkit/compat'
@@ -481,8 +482,9 @@ export const useSessions = (
 }
 
 /**
- * Patch session-level fields (`name`, `description`, `agentId`). Config fields
- * (model, instructions, configuration, ...) live on the parent agent — use
+ * Patch session-level fields (`name`, `description`, `agentId`, and the
+ * per-session `model` override — null inherits the agent's model). Remaining
+ * config (instructions, configuration, ...) lives on the parent agent — use
  * {@link import('./useAgent').useUpdateAgent} for those. The workspace binding
  * is changed separately via {@link setSessionWorkspace} (only while empty).
  */

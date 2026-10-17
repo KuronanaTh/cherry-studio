@@ -102,4 +102,35 @@ describe('ConfirmDialog', () => {
 
     expect(onOpenChange).toHaveBeenCalledWith(false)
   })
+
+  it('does not render the secondary action without text', () => {
+    const onSecondaryAction = vi.fn()
+    render(<ConfirmDialog open title="Confirm action" onSecondaryAction={onSecondaryAction} />)
+
+    expect(screen.queryByRole('button', { name: 'Secondary' })).not.toBeInTheDocument()
+    expect(onSecondaryAction).not.toHaveBeenCalled()
+  })
+
+  it('fires the secondary action and closes the dialog', async () => {
+    const user = userEvent.setup()
+    const onSecondaryAction = vi.fn()
+    const onConfirm = vi.fn()
+    const onOpenChange = vi.fn()
+    render(
+      <ConfirmDialog
+        open
+        title="Confirm action"
+        secondaryActionText="Secondary"
+        onSecondaryAction={onSecondaryAction}
+        onConfirm={onConfirm}
+        onOpenChange={onOpenChange}
+      />
+    )
+
+    await user.click(screen.getByRole('button', { name: 'Secondary' }))
+
+    expect(onSecondaryAction).toHaveBeenCalledOnce()
+    expect(onConfirm).not.toHaveBeenCalled()
+    expect(onOpenChange).toHaveBeenCalledWith(false)
+  })
 })

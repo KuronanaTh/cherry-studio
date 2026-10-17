@@ -32,6 +32,12 @@ export const AgentSessionEntitySchema = z.strictObject({
   name: SessionNameEntitySchema,
   isNameManuallyEdited: z.boolean(),
   description: z.string().optional(),
+  /**
+   * Optional per-session model override (`UniqueModelId`). `null`/absent =
+   * inherit the parent agent's model dynamically; a value pins this session to
+   * a model. Optional for older cached entities predating the field.
+   */
+  model: z.string().nullable().optional(),
   workspaceId: z.string(),
   workspace: AgentWorkspaceEntitySchema,
   /** Container-level OTel trace id — one trace tree per session. */
@@ -59,7 +65,9 @@ export const UpdateAgentSessionSchema = z.strictObject({
   name: SessionNameEntitySchema.optional(),
   isNameManuallyEdited: z.boolean().optional(),
   description: z.string().optional(),
-  agentId: z.string().min(1).optional()
+  agentId: z.string().min(1).optional(),
+  /** Non-empty = set this session's model override; `null` = clear it (inherit agent). */
+  model: z.string().min(1).nullable().optional()
 })
 
 export type UpdateAgentSessionDto = z.infer<typeof UpdateAgentSessionSchema>

@@ -15,6 +15,7 @@ const mocks = vi.hoisted(() => ({
   maybeRenameAgentSessionFromFirstUserMessage: vi.fn(),
   maybeRenameAgentSession: vi.fn(),
   applicationGet: vi.fn(),
+  getModelNames: vi.fn(),
   runtimeBeginTurn: vi.fn(),
   runtimeEnqueueUserMessage: vi.fn(),
   runtimeIsSessionBusy: vi.fn(),
@@ -28,6 +29,10 @@ vi.mock('@data/services/AgentSessionService', () => ({
 
 vi.mock('@data/services/AgentService', () => ({
   agentService: { getAgent: mocks.getAgent }
+}))
+
+vi.mock('@data/services/ModelService', () => ({
+  modelService: { getNamesByUniqueIdsTx: mocks.getModelNames }
 }))
 
 vi.mock('@data/services/AgentSessionMessageService', () => ({
@@ -144,7 +149,7 @@ describe('AgentChatContextProvider', () => {
           assertSessionWritable: mocks.runtimeAssertWritable
         }
       }
-      if (name === 'DbService') return { withWriteTx: (fn: (tx: object) => unknown) => fn({}) }
+      if (name === 'DbService') return { withWriteTx: (fn: (tx: object) => unknown) => fn({}), getDb: () => ({}) }
       throw new Error(`Unexpected application.get(${name})`)
     })
     mocks.runtimeBeginTurn.mockReturnValue({
@@ -242,6 +247,70 @@ describe('AgentChatContextProvider', () => {
       expect.objectContaining({ id: 'runtime:persistence' }),
       expect.objectContaining({ id: 'runtime:terminal' })
     ])
+  })
+
+  it('resolves the model from the session override when one is set', async () => {
+    const subscriber = makeSubscriber()
+    mocks.getSession.mockReturnValue({
+      id: 'session-1',
+      agentId: 'agent-1',
+      workspace: { path: '/tmp' },
+      model: 'openai::gpt-5'
+    })
+    mocks.getModelNames.mockReturnValue(new Map([['openai::gpt-5', 'GPT-5']]))
+
+    const prepared = await provider.prepareDispatch(subscriber, openReq())
+
+    expect(prepared.models[0].modelId).toBe('openai::gpt-5')
+    const savedMessages = mocks.saveMessagesTx.mock.calls[0][1].messages
+    expect(savedMessages[1]).toMatchObject({
+      role: 'assistant',
+      modelId: 'openai::gpt-5',
+      messageSnapshot: { model: { id: 'gpt-5', name: 'GPT-5', provider: 'openai' } }
+    })
+  })
+
+  it('falls back to the agent model when the session override is null', async () => {
+    const subscriber = makeSubscriber()
+    mocks.getSession.mockReturnValue({
+      id: 'session-1',
+      agentId: 'agent-1',
+      workspace: { path: '/tmp' },
+      model: null
+    })
+    mocks.getModelNames.mockReturnValue(new Map([['anthropic::claude-sonnet', 'Claude Sonnet']]))
+
+    const prepared = await provider.prepareDispatch(subscriber, openReq())
+
+    expect(prepared.models[0].modelId).toBe('anthropic::claude-sonnet')
+    const savedMessages = mocks.saveMessagesTx.mock.calls[0][1].messages
+    // Same model as the agent → reuse the agent's projected name, no override lookup.
+    expect(savedMessages[1]).toMatchObject({
+      modelId: 'anthropic::claude-sonnet',
+      messageSnapshot: { model: { id: 'claude-sonnet', name: 'Claude Sonnet', provider: 'anthropic' } }
+    })
+    expect(mocks.getModelNames).not.toHaveBeenCalled()
+  })
+
+  it('rejects dispatch when neither the session nor the agent has a model', async () => {
+    mocks.getSession.mockReturnValue({
+      id: 'session-1',
+      agentId: 'agent-1',
+      workspace: { path: '/tmp' },
+      model: null
+    })
+    mocks.getAgent.mockReturnValue({
+      id: 'agent-1',
+      name: 'My Agent',
+      type: 'claude-code',
+      model: null,
+      modelName: null
+    })
+
+    await expect(provider.prepareDispatch(makeSubscriber(), openReq())).rejects.toMatchObject({
+      code: 'TARGET_UNAVAILABLE'
+    })
+    expect(mocks.saveMessagesTx).not.toHaveBeenCalled()
   })
 
   it('preserves typed workspace validation errors for the dispatch boundary', async () => {

@@ -2,7 +2,7 @@ import type { ReactNode } from 'react'
 import { Suspense, useCallback, useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
-import { Checkbox, ConfirmDialog } from '@cherrystudio/ui'
+import { Button, Checkbox, ConfirmDialog } from '@cherrystudio/ui'
 import { usePreference } from '@data/hooks/usePreference'
 import { ChatLayoutModeProvider } from '@renderer/components/chat/layout/ChatLayoutModeContext'
 import type { MessageStreamingLayers } from '@renderer/components/chat/messages/types'
@@ -303,7 +303,10 @@ const AgentChat = ({
   )
   const handleAgentModelChange = useCallback(
     async (nextModel?: Model) => {
-      if (!activeAgent || !nextModel || nextModel.id === activeModel?.id) return
+      if (!activeAgent || !nextModel) return
+      // No-op when the picked model is already the effective one — the session
+      // override first, then the inherited agent model.
+      if (nextModel.id === (sessionSnapshot?.model ?? activeModel?.id)) return
       if (!isEmptyConversation && !skipModelSwitchConfirmationsForAppRun) {
         setModelSwitchTarget({ agentId: activeAgent.id, model: nextModel })
         setSkipModelSwitchConfirmation(false)
@@ -312,7 +315,14 @@ const AgentChat = ({
       }
       await updateModel({ agentId: activeAgent.id, modelId: nextModel.id }, { showSuccessToast: false })
     },
-    [activeAgent, activeModel?.id, isEmptyConversation, skipModelSwitchConfirmationsForAppRun, updateModel]
+    [
+      activeAgent,
+      activeModel?.id,
+      sessionSnapshot?.model,
+      isEmptyConversation,
+      skipModelSwitchConfirmationsForAppRun,
+      updateModel
+    ]
   )
   const handleSessionWorkspaceChange = useCallback(
     (workspaceId: string | null) => {
@@ -497,6 +507,7 @@ const AgentChat = ({
         isMultiSelectMode={isMultiSelectMode}
         sessionMessagesEnabled={sessionMessagesEnabled}
         onAgentChange={handleSessionAgentChange}
+        onModelSelect={handleAgentModelChange}
         agentChanging={sessionAgentChanging}
         onOpenCitationsPanel={handleOpenCitationsPanel}
         onCreateEmptySession={sessionAgentId && onCreateEmptySession ? handleCreateEmptySession : undefined}
@@ -547,23 +558,41 @@ const AgentChat = ({
         title={t('agent.session.model_switch_confirm.title', { model: modelSwitchTarget?.model.name ?? '' })}
         description={t('agent.session.model_switch_confirm.description')}
         content={
-          <div className="flex items-center gap-2">
-            <Checkbox
-              id="skip-model-switch-confirmation"
-              size="sm"
-              checked={skipModelSwitchConfirmation}
-              onCheckedChange={(checked) => setSkipModelSwitchConfirmation(checked === true)}
-            />
-            <label
-              htmlFor="skip-model-switch-confirmation"
-              className="cursor-pointer text-sm leading-none text-foreground">
-              {t('agent.session.model_switch_confirm.skip_for_app_run')}
-            </label>
-          </div>
+          <>
+            <div className="flex items-center gap-2">
+              <Checkbox
+                id="skip-model-switch-confirmation"
+                size="sm"
+                checked={skipModelSwitchConfirmation}
+                onCheckedChange={(checked) => setSkipModelSwitchConfirmation(checked === true)}
+              />
+              <label
+                htmlFor="skip-model-switch-confirmation"
+                className="cursor-pointer text-sm leading-none text-foreground">
+                {t('agent.session.model_switch_confirm.skip_for_app_run')}
+              </label>
+            </div>
+            {sessionSnapshot?.model && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="mt-2"
+                onClick={async () => {
+                  if (!sessionSnapshot) return
+                  await updateSession({ id: sessionSnapshot.id, model: null }, { showSuccessToast: false })
+                  setModelSwitchConfirmOpen(false)
+                }}>
+                {t('agent.session.model_switch_confirm.reset_to_agent_default')}
+              </Button>
+            )}
+          </>
         }
-        confirmText={t('agent.session.model_switch_confirm.confirm')}
-        cancelText={t('common.cancel')}
-        onConfirm={async () => {
+        // Primary: pin the picked model to this session only.
+        confirmText={t('agent.session.model_switch_confirm.confirm_session')}
+        // Secondary: the previous behavior — switch the agent's model for all
+        // its sessions. The skip checkbox only applies to this path.
+        secondaryActionText={t('agent.session.model_switch_confirm.confirm_agent')}
+        onSecondaryAction={async () => {
           if (
             !activeAgent ||
             !modelSwitchTarget ||
@@ -579,6 +608,16 @@ const AgentChat = ({
           if (updatedAgent && skipModelSwitchConfirmation) {
             setSkipModelSwitchConfirmationsForAppRun(true)
           }
+        }}
+        cancelText={t('common.cancel')}
+        onConfirm={async () => {
+          if (!sessionSnapshot || !modelSwitchTarget || modelSwitchTarget.agentId !== sessionSnapshot.agentId) {
+            return
+          }
+          await updateSession(
+            { id: sessionSnapshot.id, model: modelSwitchTarget.model.id },
+            { showSuccessToast: false }
+          )
         }}
       />
     </>
@@ -598,6 +637,7 @@ interface AgentChatSessionCenterProps {
   isMultiSelectMode: boolean
   sessionMessagesEnabled: boolean
   onAgentChange?: (agentId: string | null) => void | Promise<void>
+  onModelSelect?: (model: Model) => void | Promise<void>
   agentChanging?: boolean
   onOpenCitationsPanel: (payload: { citations: Citation[] }) => void
   onCreateEmptySession?: () => void | Promise<unknown>
@@ -618,6 +658,7 @@ const AgentChatSessionCenter = ({
   isMultiSelectMode,
   sessionMessagesEnabled,
   onAgentChange,
+  onModelSelect,
   agentChanging,
   onOpenCitationsPanel,
   onCreateEmptySession,
@@ -641,6 +682,7 @@ const AgentChatSessionCenter = ({
         isStreaming={runtime.isPending}
         sendDisabled={composerPending}
         onAgentChange={onAgentChange}
+        onModelSelect={onModelSelect}
         agentChanging={agentChanging}
         onCreateEmptySession={onCreateEmptySession}
         composerContext={runtime.composerContext}

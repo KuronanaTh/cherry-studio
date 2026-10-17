@@ -200,6 +200,14 @@ type Props = {
   stop: () => Promise<void>
   onCreateEmptySession?: () => void | Promise<unknown>
   onAgentChange?: (agentId: string | null) => void | Promise<void>
+  /**
+   * Override the model-change persistence target. When provided, the composer
+   * delegates model switches to this callback instead of writing the agent's
+   * model itself (used by AgentChat to scope the change per-session). The
+   * default agent-wide `updateModel` path (incl. reasoning reconciliation)
+   * is unchanged when absent.
+   */
+  onModelSelect?: (model: Model) => void | Promise<void>
   agentChanging?: boolean
   canChangeAgent?: boolean
   workspaceId?: string | null
@@ -230,6 +238,7 @@ const AgentComposerRoot = ({
   stop,
   onCreateEmptySession,
   onAgentChange,
+  onModelSelect,
   agentChanging,
   canChangeAgent = false,
   workspaceId,
@@ -365,6 +374,7 @@ const AgentComposerRoot = ({
         chatStop={stop}
         onCreateEmptySession={onCreateEmptySession}
         onAgentChange={onAgentChange}
+        onModelSelect={onModelSelect}
         agentChanging={agentChanging}
         canChangeAgent={canChangeAgent}
         onWorkspaceChange={onWorkspaceChange}
@@ -408,6 +418,8 @@ interface InnerProps {
   chatStop: Props['stop']
   onCreateEmptySession?: Props['onCreateEmptySession']
   onAgentChange?: Props['onAgentChange']
+  /** Optional model-change override; see Props.onModelSelect. */
+  onModelSelect?: Props['onModelSelect']
   agentChanging?: boolean
   canChangeAgent: boolean
   onWorkspaceChange?: Props['onWorkspaceChange']
@@ -488,6 +500,7 @@ const AgentComposerInner = ({
   chatStop,
   onCreateEmptySession,
   onAgentChange,
+  onModelSelect,
   agentChanging,
   canChangeAgent,
   onWorkspaceChange,
@@ -1008,6 +1021,13 @@ const AgentComposerInner = ({
     async (nextModel?: Model) => {
       if (!agent || !canChangeModel || !nextModel || nextModel.id === model?.id) return
 
+      // Session-scoped switch: the owner decides where the model change lands
+      // (session override vs agent-wide) — no agent mutation here.
+      if (onModelSelect) {
+        await onModelSelect(nextModel)
+        return
+      }
+
       const nextReasoningEffort = resolveReasoningEffortForModel(nextModel, reasoningEffort) ?? 'default'
       const pendingReasoningEdit =
         pendingReasoningEditRef.current?.agentId === agent.id ? pendingReasoningEditRef.current : null
@@ -1049,7 +1069,16 @@ const AgentComposerInner = ({
       }
       setReasoningOverride((current) => (current?.agentId === agent.id && current.version === version ? null : current))
     },
-    [activeReasoningOverride, agent, canChangeModel, canonicalReasoningEffort, model?.id, reasoningEffort, updateModel]
+    [
+      activeReasoningOverride,
+      agent,
+      canChangeModel,
+      canonicalReasoningEffort,
+      model?.id,
+      onModelSelect,
+      reasoningEffort,
+      updateModel
+    ]
   )
 
   const handleCreateEmptySession = useCallback(() => {

@@ -37,17 +37,22 @@ export function getAgentDescriptionForDisplay(
   return ''
 }
 
-export function getAgentModelFallbackSnapshot(agent?: {
-  model?: string | null
-  modelName?: string | null
-}): ModelSnapshot | undefined {
-  const modelString = agent?.model
+export function getAgentModelFallbackSnapshot(
+  agent?: {
+    model?: string | null
+    modelName?: string | null
+  },
+  /** Optional per-session model override; wins over the agent's base model. */
+  sessionModel?: string | null
+): ModelSnapshot | undefined {
+  const modelString = sessionModel || agent?.model
   if (!isUniqueModelId(modelString)) return undefined
 
   const { providerId, modelId } = parseUniqueModelId(modelString)
   if (!providerId || !modelId) return undefined
 
-  return { id: modelId, name: agent?.modelName ?? modelId, provider: providerId }
+  const name = modelString === agent?.model ? (agent?.modelName ?? modelId) : modelId
+  return { id: modelId, name, provider: providerId }
 }
 
 export const permissionModeCards: PermissionModeCard[] = [
