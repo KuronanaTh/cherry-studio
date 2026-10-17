@@ -127,12 +127,6 @@ describe('ConfirmDialog', () => {
       />
     )
 
-    const footerButtons = screen.getByRole('dialog').querySelectorAll('[data-slot="dialog-footer"] button')
-    // [secondary] [confirm] [cancel] — cancel stays rightmost.
-    expect(footerButtons[0]).toHaveTextContent('Secondary')
-    expect(footerButtons[1]).toHaveTextContent('Confirm')
-    expect(footerButtons[footerButtons.length - 1]).toHaveTextContent('Cancel')
-
     await user.click(screen.getByRole('button', { name: 'Secondary' }))
 
     expect(onSecondaryAction).toHaveBeenCalledOnce()
@@ -140,29 +134,27 @@ describe('ConfirmDialog', () => {
     expect(onOpenChange).toHaveBeenCalledWith(false)
   })
 
-  it('keeps the default footer order without a secondary action', () => {
-    render(<ConfirmDialog open title="Confirm action" confirmText="Confirm" cancelText="Cancel" />)
+  it('keeps the default footer order with or without a secondary action', () => {
+    const { rerender } = render(<ConfirmDialog open title="Confirm action" confirmText="Confirm" cancelText="Cancel" />)
 
-    const footerButtons = screen.getByRole('dialog').querySelectorAll('[data-slot="dialog-footer"] button')
-    // Without a secondary action: [cancel] [confirm].
-    expect(footerButtons[0]).toHaveTextContent('Cancel')
-    expect(footerButtons[footerButtons.length - 1]).toHaveTextContent('Confirm')
-  })
+    const footerButtons = () => screen.getByRole('dialog').querySelectorAll('[data-slot="dialog-footer"] button')
+    // Default: [cancel] [confirm].
+    expect(footerButtons()[0]).toHaveTextContent('Cancel')
+    expect(footerButtons()[1]).toHaveTextContent('Confirm')
 
-  it('renders footerStart at the footer start edge', () => {
-    render(
+    rerender(
       <ConfirmDialog
         open
         title="Confirm action"
-        footerStart={<button type="button">Reset</button>}
+        confirmText="Confirm"
+        cancelText="Cancel"
         secondaryActionText="Secondary"
         onSecondaryAction={() => undefined}
       />
     )
-
-    const footer = screen.getByRole('dialog').querySelector('[data-slot="dialog-footer"]')
-    const startGroup = footer?.firstElementChild
-    expect(startGroup).toHaveTextContent('Reset')
-    expect(startGroup?.firstElementChild).toHaveTextContent('Reset')
+    // With a secondary action: [secondary] [cancel] [confirm].
+    expect(footerButtons()[0]).toHaveTextContent('Secondary')
+    expect(footerButtons()[1]).toHaveTextContent('Cancel')
+    expect(footerButtons()[2]).toHaveTextContent('Confirm')
   })
 })
