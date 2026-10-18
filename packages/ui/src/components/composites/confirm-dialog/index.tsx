@@ -90,8 +90,13 @@ function ConfirmDialog({
           <DialogTitle>{title}</DialogTitle>
           {description && <DialogDescription>{description}</DialogDescription>}
         </DialogHeader>
-        {content}
-        <DialogFooter>
+        {/* min-w-0 stops wide custom content (e.g. full-width buttons) from
+            stretching the grid track past the dialog's max width. */}
+        {content && <div className="min-w-0">{content}</div>}
+        {/* flex-wrap lets long localized labels flow to a second row instead of
+            overflowing the dialog; min-w-0 lets buttons shrink below their text
+            width so the wrap actually triggers. */}
+        <DialogFooter className="flex-wrap [&_button]:max-w-full [&_button]:min-w-0">
           {secondaryActionText && onSecondaryAction ? (
             // Extended footer: [secondary] [confirm] [cancel] — cancel stays rightmost.
             <>
