@@ -573,28 +573,30 @@ const AgentChat = ({
               </label>
             </div>
             {sessionSnapshot?.model && (
-              // Own row above the footer: reseting the override is the
-              // highlighted choice when a session has its own model.
-              <div className="min-w-0">
-                <Button
-                  variant="default"
-                  size="sm"
-                  className="w-full"
-                  onClick={async () => {
-                    if (!sessionSnapshot) return
-                    await updateSession({ id: sessionSnapshot.id, model: null }, { showSuccessToast: false })
-                    setModelSwitchConfirmOpen(false)
-                  }}>
-                  {t('agent.session.model_switch_confirm.reset_to_agent_default')}
-                </Button>
-              </div>
+              // Own row above the stacked actions: reseting the override is
+              // the highlighted choice when a session has its own model.
+              <Button
+                variant="default"
+                size="sm"
+                className="w-full"
+                onClick={async () => {
+                  if (!sessionSnapshot) return
+                  await updateSession({ id: sessionSnapshot.id, model: null }, { showSuccessToast: false })
+                  setModelSwitchConfirmOpen(false)
+                }}>
+                {t('agent.session.model_switch_confirm.reset_to_agent_default')}
+              </Button>
             )}
           </>
         }
-        // Primary: pin the picked model to this session only (unstyled on purpose —
-        // the highlighted choice is the reset row above).
+        // Session switch reads as an unstyled choice — the highlighted one is
+        // the reset row above.
         confirmText={t('agent.session.model_switch_confirm.confirm_session')}
         confirmVariant="ghost"
+        // Vertical action stack: one full-width button per row so long
+        // localized labels never overflow; cancel reads as the abort action.
+        layout="stack"
+        cancelVariant="destructive"
         // Secondary: the previous behavior — switch the agent's model for all
         // its sessions. The skip checkbox only applies to this path.
         secondaryActionText={t('agent.session.model_switch_confirm.confirm_agent')}
