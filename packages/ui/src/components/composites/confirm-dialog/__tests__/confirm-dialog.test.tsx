@@ -164,4 +164,29 @@ describe('ConfirmDialog', () => {
     const confirmButton = screen.getByRole('button', { name: 'Confirm' })
     expect(confirmButton).toHaveClass('hover:bg-accent')
   })
+
+  it('stacks actions vertically with a destructive cancel when layout="stack"', () => {
+    render(
+      <ConfirmDialog
+        open
+        title="Confirm action"
+        confirmText="Confirm"
+        cancelText="Cancel"
+        secondaryActionText="Secondary"
+        onSecondaryAction={() => undefined}
+        layout="stack"
+        cancelVariant="destructive"
+      />
+    )
+
+    const footer = screen.getByRole('dialog').querySelector('[data-slot="dialog-footer"]')
+    // Stacked: no horizontal row class, every button stretched full-width.
+    expect(footer).toHaveClass('flex-col')
+    expect(footer?.className).toContain('[&_button]:w-full')
+    const buttons = footer?.querySelectorAll('button') ?? []
+    expect(buttons[0]).toHaveTextContent('Secondary')
+    expect(buttons[1]).toHaveTextContent('Confirm')
+    expect(buttons[2]).toHaveTextContent('Cancel')
+    expect(screen.getByRole('button', { name: 'Cancel' })).toHaveClass('bg-destructive')
+  })
 })

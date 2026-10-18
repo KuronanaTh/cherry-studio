@@ -28,8 +28,14 @@ interface ConfirmDialogProps {
   confirmVariant?: 'default' | 'ghost' | 'outline' | 'destructive'
   /** Cancel button text */
   cancelText?: string
+  /** Cancel button style; defaults to `outline`. */
+  cancelVariant?: 'outline' | 'destructive' | 'ghost' | 'default'
   /** Disabled state for cancel button */
   cancelDisabled?: boolean
+  /** `row` (default) keeps the stock horizontal footer; `stack` lays every
+   * action out as a full-width row top-to-bottom — long localized labels
+   * never overflow. */
+  layout?: 'row' | 'stack'
   /** Return false to keep the dialog open; void or true closes it. */
   onConfirm?: () => boolean | void | Promise<boolean | void>
   /** Optional secondary action button text. When present the footer reads
@@ -59,7 +65,9 @@ function ConfirmDialog({
   confirmText = 'Confirm',
   cancelText = 'Cancel',
   confirmVariant,
+  cancelVariant = 'outline',
   cancelDisabled = false,
+  layout = 'row',
   onConfirm,
   secondaryActionText,
   onSecondaryAction,
@@ -93,12 +101,10 @@ function ConfirmDialog({
         {/* min-w-0 stops wide custom content (e.g. full-width buttons) from
             stretching the grid track past the dialog's max width. */}
         {content && <div className="min-w-0">{content}</div>}
-        {/* flex-wrap lets long localized labels flow to a second row instead of
-            overflowing the dialog; min-w-0 lets buttons shrink below their text
-            width so the wrap actually triggers. */}
-        <DialogFooter className="flex-wrap [&_button]:max-w-full [&_button]:min-w-0">
+        {/* Stack layout: one full-width action per row, top-to-bottom. */}
+        <DialogFooter className={layout === 'stack' ? 'flex-col sm:flex-col [&_button]:w-full' : undefined}>
           {secondaryActionText && onSecondaryAction ? (
-            // Extended footer: [secondary] [confirm] [cancel] — cancel stays rightmost.
+            // Extended footer: [secondary] [confirm] [cancel].
             <>
               <Button variant="ghost" onClick={handleSecondaryAction}>
                 {secondaryActionText}
@@ -111,7 +117,7 @@ function ConfirmDialog({
                 {confirmText}
               </Button>
               <DialogClose asChild>
-                <Button variant="outline" disabled={cancelDisabled}>
+                <Button variant={cancelVariant} disabled={cancelDisabled}>
                   {cancelText}
                 </Button>
               </DialogClose>
@@ -120,7 +126,7 @@ function ConfirmDialog({
             // Stock footer: [cancel] [confirm].
             <>
               <DialogClose asChild>
-                <Button variant="outline" disabled={cancelDisabled}>
+                <Button variant={cancelVariant} disabled={cancelDisabled}>
                   {cancelText}
                 </Button>
               </DialogClose>
