@@ -44,6 +44,9 @@ interface ConfirmDialogProps {
   secondaryActionText?: string
   /** Return false to keep the dialog open; void or true closes it. */
   onSecondaryAction?: () => boolean | void | Promise<boolean | void>
+  /** Optional extra action appended after the confirm button (used by stacked
+   * layouts that offer more than two choices). */
+  extraAction?: { text: string; onAction: () => boolean | void | Promise<boolean | void> }
   /** Whether this is a destructive action (e.g., delete) */
   destructive?: boolean
   /** Loading state for confirm button */
@@ -71,6 +74,7 @@ function ConfirmDialog({
   onConfirm,
   secondaryActionText,
   onSecondaryAction,
+  extraAction,
   destructive = false,
   confirmLoading = false,
   confirmDisabled = false,
@@ -86,6 +90,11 @@ function ConfirmDialog({
     const result = await onSecondaryAction?.()
     if (result !== false) onOpenChange?.(false)
   }, [onSecondaryAction, onOpenChange])
+
+  const handleExtraAction = React.useCallback(async () => {
+    const result = await extraAction?.onAction()
+    if (result !== false) onOpenChange?.(false)
+  }, [extraAction, onOpenChange])
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -104,7 +113,7 @@ function ConfirmDialog({
         {/* Stack layout: one full-width action per row, top-to-bottom. */}
         <DialogFooter className={layout === 'stack' ? 'flex-col sm:flex-col [&_button]:w-full' : undefined}>
           {secondaryActionText && onSecondaryAction ? (
-            // Extended footer: [secondary] [confirm] [cancel].
+            // Extended footer: [secondary] [confirm] [extra?] [cancel].
             <>
               <Button variant="ghost" onClick={handleSecondaryAction}>
                 {secondaryActionText}
@@ -116,6 +125,11 @@ function ConfirmDialog({
                 disabled={confirmDisabled}>
                 {confirmText}
               </Button>
+              {extraAction && (
+                <Button variant="ghost" onClick={handleExtraAction}>
+                  {extraAction.text}
+                </Button>
+              )}
               <DialogClose asChild>
                 <Button variant={cancelVariant} disabled={cancelDisabled}>
                   {cancelText}
@@ -123,7 +137,7 @@ function ConfirmDialog({
               </DialogClose>
             </>
           ) : (
-            // Stock footer: [cancel] [confirm].
+            // Stock footer: [cancel] [confirm] [extra?].
             <>
               <DialogClose asChild>
                 <Button variant={cancelVariant} disabled={cancelDisabled}>
@@ -137,6 +151,11 @@ function ConfirmDialog({
                 disabled={confirmDisabled}>
                 {confirmText}
               </Button>
+              {extraAction && (
+                <Button variant="ghost" onClick={handleExtraAction}>
+                  {extraAction.text}
+                </Button>
+              )}
             </>
           )}
         </DialogFooter>

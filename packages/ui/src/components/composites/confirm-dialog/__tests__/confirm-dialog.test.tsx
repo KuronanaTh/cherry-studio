@@ -189,4 +189,34 @@ describe('ConfirmDialog', () => {
     expect(buttons[2]).toHaveTextContent('Cancel')
     expect(screen.getByRole('button', { name: 'Cancel' })).toHaveClass('bg-destructive')
   })
+
+  it('renders the extra action after confirm and fires it on click', async () => {
+    const user = userEvent.setup()
+    const onConfirm = vi.fn()
+    const onExtraAction = vi.fn()
+    const onOpenChange = vi.fn()
+    render(
+      <ConfirmDialog
+        open
+        title="Confirm action"
+        confirmText="Confirm"
+        cancelText="Cancel"
+        extraAction={{ text: 'Extra', onAction: onExtraAction }}
+        onConfirm={onConfirm}
+        onOpenChange={onOpenChange}
+      />
+    )
+
+    const footerButtons = screen.getByRole('dialog').querySelectorAll('[data-slot="dialog-footer"] button')
+    // [cancel] [confirm] [extra].
+    expect(footerButtons[0]).toHaveTextContent('Cancel')
+    expect(footerButtons[1]).toHaveTextContent('Confirm')
+    expect(footerButtons[2]).toHaveTextContent('Extra')
+
+    await user.click(screen.getByRole('button', { name: 'Extra' }))
+
+    expect(onExtraAction).toHaveBeenCalledOnce()
+    expect(onConfirm).not.toHaveBeenCalled()
+    expect(onOpenChange).toHaveBeenCalledWith(false)
+  })
 })
