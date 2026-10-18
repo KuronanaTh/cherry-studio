@@ -2,7 +2,7 @@ import type { ReactNode } from 'react'
 import { Suspense, useCallback, useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
-import { Button, Checkbox, ConfirmDialog } from '@cherrystudio/ui'
+import { Checkbox, ConfirmDialog } from '@cherrystudio/ui'
 import { usePreference } from '@data/hooks/usePreference'
 import { ChatLayoutModeProvider } from '@renderer/components/chat/layout/ChatLayoutModeContext'
 import type { MessageStreamingLayers } from '@renderer/components/chat/messages/types'
@@ -558,41 +558,27 @@ const AgentChat = ({
         title={t('agent.session.model_switch_confirm.title', { model: modelSwitchTarget?.model.name ?? '' })}
         description={t('agent.session.model_switch_confirm.description')}
         content={
-          <>
-            <div className="flex items-center gap-2">
-              <Checkbox
-                id="skip-model-switch-confirmation"
-                size="sm"
-                checked={skipModelSwitchConfirmation}
-                onCheckedChange={(checked) => setSkipModelSwitchConfirmation(checked === true)}
-              />
-              <label
-                htmlFor="skip-model-switch-confirmation"
-                className="cursor-pointer text-sm leading-none text-foreground">
-                {t('agent.session.model_switch_confirm.skip_for_app_run')}
-              </label>
-            </div>
-            {sessionSnapshot?.model && (
-              // Own row above the stacked actions: reseting the override is
-              // the highlighted choice when a session has its own model.
-              <Button
-                variant="default"
-                size="sm"
-                className="w-full"
-                onClick={async () => {
-                  if (!sessionSnapshot) return
-                  await updateSession({ id: sessionSnapshot.id, model: null }, { showSuccessToast: false })
-                  setModelSwitchConfirmOpen(false)
-                }}>
-                {t('agent.session.model_switch_confirm.reset_to_agent_default')}
-              </Button>
-            )}
-          </>
+          <div className="flex items-center gap-2">
+            <Checkbox
+              id="skip-model-switch-confirmation"
+              size="sm"
+              checked={skipModelSwitchConfirmation}
+              onCheckedChange={(checked) => setSkipModelSwitchConfirmation(checked === true)}
+            />
+            <label
+              htmlFor="skip-model-switch-confirmation"
+              className="cursor-pointer text-sm leading-none text-foreground">
+              {t('agent.session.model_switch_confirm.skip_for_app_run')}
+            </label>
+          </div>
         }
-        // Session switch reads as an unstyled choice — the highlighted one is
-        // the reset row above.
-        confirmText={t('agent.session.model_switch_confirm.confirm_session')}
-        confirmVariant="ghost"
+        // Confirm = reset to the agent's model when the session has an override
+        // (highlighted first row); otherwise confirm the session-only switch.
+        confirmText={
+          sessionSnapshot?.model
+            ? t('agent.session.model_switch_confirm.reset_to_agent_default')
+            : t('agent.session.model_switch_confirm.confirm_session')
+        }
         // Vertical action stack: one full-width button per row so long
         // localized labels never overflow; cancel reads as the abort action.
         layout="stack"
@@ -617,8 +603,30 @@ const AgentChat = ({
             setSkipModelSwitchConfirmationsForAppRun(true)
           }
         }}
+        // Extra: session-only switch, shown when the reset row owns the confirm slot.
+        extraAction={
+          sessionSnapshot?.model
+            ? {
+                text: t('agent.session.model_switch_confirm.confirm_session'),
+                onAction: async () => {
+                  if (!sessionSnapshot || !modelSwitchTarget || modelSwitchTarget.agentId !== sessionSnapshot.agentId) {
+                    return
+                  }
+                  await updateSession(
+                    { id: sessionSnapshot.id, model: modelSwitchTarget.model.id },
+                    { showSuccessToast: false }
+                  )
+                }
+              }
+            : undefined
+        }
         cancelText={t('common.cancel')}
         onConfirm={async () => {
+          // With an override, the confirm slot is the reset action.
+          if (sessionSnapshot?.model) {
+            await updateSession({ id: sessionSnapshot.id, model: null }, { showSuccessToast: false })
+            return
+          }
           if (!sessionSnapshot || !modelSwitchTarget || modelSwitchTarget.agentId !== sessionSnapshot.agentId) {
             return
           }
