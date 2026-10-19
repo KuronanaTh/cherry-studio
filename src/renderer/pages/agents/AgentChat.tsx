@@ -572,20 +572,24 @@ const AgentChat = ({
             </label>
           </div>
         }
-        // Confirm = reset to the agent's model when the session has an override
-        // (highlighted first row); otherwise confirm the session-only switch.
+        // Confirm = reset to the agent's model when the session has an override;
+        // otherwise confirm the session-only switch. No highlight either way —
+        // the red cancel is the only emphasized button.
         confirmText={
           sessionSnapshot?.model
             ? t('agent.session.model_switch_confirm.reset_to_agent_default')
             : t('agent.session.model_switch_confirm.confirm_session')
         }
+        confirmVariant="outline"
         // Vertical action stack: one full-width button per row so long
         // localized labels never overflow; cancel reads as the abort action.
         layout="stack"
         cancelVariant="destructive"
         // Secondary: the previous behavior — switch the agent's model for all
-        // its sessions. The skip checkbox only applies to this path.
+        // its sessions. The skip checkbox only applies to this path. Outlined
+        // so the buttons stay visible without hover on the dark background.
         secondaryActionText={t('agent.session.model_switch_confirm.confirm_agent')}
+        secondaryVariant="outline"
         onSecondaryAction={async () => {
           if (
             !activeAgent ||
@@ -620,6 +624,7 @@ const AgentChat = ({
               }
             : undefined
         }
+        extraVariant="outline"
         cancelText={t('common.cancel')}
         onConfirm={async () => {
           // With an override, the confirm slot is the reset action.
