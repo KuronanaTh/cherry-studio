@@ -42,11 +42,15 @@ interface ConfirmDialogProps {
    * [secondary] [confirm] [cancel] with cancel rightmost; without it the
    * default [cancel] [confirm] order is unchanged. */
   secondaryActionText?: string
+  /** Secondary button style; defaults to `ghost`. */
+  secondaryVariant?: 'default' | 'ghost' | 'outline' | 'destructive'
   /** Return false to keep the dialog open; void or true closes it. */
   onSecondaryAction?: () => boolean | void | Promise<boolean | void>
   /** Optional extra action appended after the confirm button (used by stacked
    * layouts that offer more than two choices). */
   extraAction?: { text: string; onAction: () => boolean | void | Promise<boolean | void> }
+  /** Extra action button style; defaults to `ghost`. */
+  extraVariant?: 'default' | 'ghost' | 'outline' | 'destructive'
   /** Whether this is a destructive action (e.g., delete) */
   destructive?: boolean
   /** Loading state for confirm button */
@@ -73,8 +77,10 @@ function ConfirmDialog({
   layout = 'row',
   onConfirm,
   secondaryActionText,
+  secondaryVariant = 'ghost',
   onSecondaryAction,
   extraAction,
+  extraVariant = 'ghost',
   destructive = false,
   confirmLoading = false,
   confirmDisabled = false,
@@ -115,7 +121,7 @@ function ConfirmDialog({
           {secondaryActionText && onSecondaryAction ? (
             // Extended footer: [secondary] [confirm] [extra?] [cancel].
             <>
-              <Button variant="ghost" onClick={handleSecondaryAction}>
+              <Button variant={secondaryVariant} onClick={handleSecondaryAction}>
                 {secondaryActionText}
               </Button>
               <Button
@@ -126,7 +132,7 @@ function ConfirmDialog({
                 {confirmText}
               </Button>
               {extraAction && (
-                <Button variant="ghost" onClick={handleExtraAction}>
+                <Button variant={extraVariant} onClick={handleExtraAction}>
                   {extraAction.text}
                 </Button>
               )}
@@ -152,7 +158,7 @@ function ConfirmDialog({
                 {confirmText}
               </Button>
               {extraAction && (
-                <Button variant="ghost" onClick={handleExtraAction}>
+                <Button variant={extraVariant} onClick={handleExtraAction}>
                   {extraAction.text}
                 </Button>
               )}
