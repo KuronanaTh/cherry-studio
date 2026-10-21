@@ -307,21 +307,30 @@ const AgentChat = ({
       // No-op when the picked model is already the effective one — the session
       // override first, then the inherited agent model.
       if (nextModel.id === (sessionSnapshot?.model ?? activeModel?.id)) return
-      if (!isEmptyConversation && !skipModelSwitchConfirmationsForAppRun) {
-        setModelSwitchTarget({ agentId: activeAgent.id, model: nextModel })
-        setSkipModelSwitchConfirmation(false)
-        setModelSwitchConfirmOpen(true)
+      // The "don't ask again" pick still means agent-wide, as confirmed.
+      if (skipModelSwitchConfirmationsForAppRun) {
+        await updateModel({ agentId: activeAgent.id, modelId: nextModel.id }, { showSuccessToast: false })
         return
       }
-      await updateModel({ agentId: activeAgent.id, modelId: nextModel.id }, { showSuccessToast: false })
+      // An empty session has nothing at stake: record the pick as a
+      // session-only override instead of silently changing the agent model.
+      if (isEmptyConversation && sessionSnapshot) {
+        await updateSession({ id: sessionSnapshot.id, model: nextModel.id }, { showSuccessToast: false })
+        return
+      }
+      setModelSwitchTarget({ agentId: activeAgent.id, model: nextModel })
+      setSkipModelSwitchConfirmation(false)
+      setModelSwitchConfirmOpen(true)
     },
     [
       activeAgent,
       activeModel?.id,
+      sessionSnapshot,
       sessionSnapshot?.model,
       isEmptyConversation,
       skipModelSwitchConfirmationsForAppRun,
-      updateModel
+      updateModel,
+      updateSession
     ]
   )
   const handleSessionWorkspaceChange = useCallback(
