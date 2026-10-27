@@ -8,6 +8,9 @@ import { and, eq, or } from 'drizzle-orm'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { application } from '@application'
+import { agentTable } from '@data/db/schemas/agent'
+import { agentSessionTable } from '@data/db/schemas/agentSession'
+import { agentWorkspaceTable } from '@data/db/schemas/agentWorkspace'
 import { knowledgeBaseTable } from '@data/db/schemas/knowledge'
 import { pinTable } from '@data/db/schemas/pin'
 import { userModelTable } from '@data/db/schemas/userModel'
@@ -2066,6 +2069,37 @@ describe('ModelService — transaction-scoped reads never re-enter DbService', (
 
 describe('ModelService.delete', () => {
   const dbh = setupTestDatabase()
+
+  it('releases session model overrides before deleting the model row', async () => {
+    await dbh.db.insert(userProviderTable).values(providerRow('openai', 'OpenAI'))
+    await dbh.db.insert(userModelTable).values(modelRow('openai', 'gpt-4o', { name: 'GPT-4o' }))
+    const targetModelId = createUniqueModelId('openai', 'gpt-4o')
+    await dbh.db.insert(agentTable).values({
+      id: 'agent-model-delete',
+      type: 'claude-code',
+      name: 'Agent',
+      instructions: '',
+      model: null,
+      orderKey: 'a0'
+    })
+    const workspace = await dbh.db
+      .insert(agentWorkspaceTable)
+      .values({ name: 'ws', path: '/tmp/model-delete-ws', orderKey: generateOrderKeyBetween(null, null) })
+      .returning({ id: agentWorkspaceTable.id })
+    await dbh.db.insert(agentSessionTable).values({
+      agentId: 'agent-model-delete',
+      name: 'session',
+      workspaceId: workspace[0].id,
+      model: targetModelId,
+      orderKey: generateOrderKeyBetween(null, null)
+    })
+
+    modelService.delete('openai', 'gpt-4o')
+
+    const sessionRows = await dbh.db.select().from(agentSessionTable)
+    expect(sessionRows).toHaveLength(1)
+    expect(sessionRows[0].model).toBeNull()
+  })
 
   it('removes the model row from the database', async () => {
     await dbh.db.insert(userProviderTable).values(providerRow('openai', 'OpenAI'))

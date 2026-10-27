@@ -13,6 +13,7 @@ import { isEqual } from 'es-toolkit/compat'
 import { application } from '@application'
 import type { ModelLookupResult } from '@cherrystudio/provider-registry'
 import { inferReasoningOwnedBy } from '@cherrystudio/provider-registry'
+import { agentSessionTable } from '@data/db/schemas/agentSession'
 import type { InsertUserModelRow, UserModelRow } from '@data/db/schemas/userModel'
 import { userModelTable } from '@data/db/schemas/userModel'
 import { userProviderTable } from '@data/db/schemas/userProvider'
@@ -1212,14 +1213,24 @@ class ModelService {
       () =>
         application.get('DbService').withWriteTx((tx) => {
           const rows = tx
-            .delete(userModelTable)
+            .select({ id: userModelTable.id })
+            .from(userModelTable)
             .where(and(eq(userModelTable.providerId, providerId), eq(userModelTable.modelId, modelId)))
-            .returning({ id: userModelTable.id })
             .all()
 
           if (rows.length === 0) {
             throw DataApiErrorFactory.notFound('Model', `${providerId}/${modelId}`)
           }
+
+          // Session overrides hold the model row's id. Release them before the
+          // delete: on databases migrated before the 0029 fix the FK is
+          // NO ACTION (it was written without ON DELETE SET NULL), so the
+          // delete itself would fail while sessions still reference the row.
+          tx.update(agentSessionTable).set({ model: null }).where(eq(agentSessionTable.model, rows[0].id)).run()
+
+          tx.delete(userModelTable)
+            .where(and(eq(userModelTable.providerId, providerId), eq(userModelTable.modelId, modelId)))
+            .run()
 
           pinService.purgeForEntityTx(tx, 'model', rows[0].id)
         }),
@@ -1275,6 +1286,9 @@ class ModelService {
 
           for (let i = 0; i < ids.length; i += SQLITE_INARRAY_CHUNK) {
             const chunk = ids.slice(i, i + SQLITE_INARRAY_CHUNK)
+            // Release session overrides first (see the single-model delete for
+            // why: the 0029 FK on older databases is NO ACTION, not SET NULL).
+            tx.update(agentSessionTable).set({ model: null }).where(inArray(agentSessionTable.model, chunk)).run()
             const deletedRows = tx
               .delete(userModelTable)
               .where(inArray(userModelTable.id, chunk))
