@@ -309,6 +309,10 @@ export type SharedCacheSchema = {
   'network.online': boolean
   // Runtime-only opt-out shared across windows; resets when the app exits.
   'agent.model_switch_confirmation.skipped': boolean
+  // Which model-change scope the "don't ask again" pick silences: `session`
+  // auto-applies a session override, `agent` auto-switches the agent's model,
+  // null keeps asking. Runtime-only; resets when the app exits.
+  'agent.model_switch_confirmation.skip_scope': 'session' | 'agent' | null
   'agent.session.compaction.${sessionId}': CacheValueTypes.CacheAgentSessionCompactionState
   'agent.session.closing.${sessionId}': boolean
   'agent.session.api_retry.${sessionId}': CacheValueTypes.CacheAgentSessionApiRetryState
@@ -394,6 +398,7 @@ export const DefaultSharedCache: SharedCacheSchema = {
   'doctor.agent.${scope}': { status: 'idle' },
   'network.online': true,
   'agent.model_switch_confirmation.skipped': false,
+  'agent.model_switch_confirmation.skip_scope': null,
   'agent.session.compaction.${sessionId}': null,
   'agent.session.closing.${sessionId}': false,
   'agent.session.api_retry.${sessionId}': null,

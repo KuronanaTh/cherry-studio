@@ -187,9 +187,10 @@ const AgentChat = ({
   const { t } = useTranslation()
   const [messageStyle] = usePreference('chat.message.style')
   const [isMultiSelectMode] = useCache('chat.multi_select_mode')
-  const [skipModelSwitchConfirmationsForAppRun, setSkipModelSwitchConfirmationsForAppRun] = useSharedCache(
-    'agent.model_switch_confirmation.skipped'
-  )
+  // Which model-change scope the "don't ask again" pick silences: `session`
+  // auto-applies a session override, `agent` auto-switches the agent's model,
+  // null keeps asking. Runtime-only; resets when the app exits.
+  const [skipModelSwitchScope, setSkipModelSwitchScope] = useSharedCache('agent.model_switch_confirmation.skip_scope')
   const currentSessionId = conversationBootstrap.session?.id
   const [citationPanelState, setCitationPanelState] = useState<CitationPanelState | null>(null)
   const [shouldMountCitationsPanel, setShouldMountCitationsPanel] = useState(false)
@@ -309,9 +310,15 @@ const AgentChat = ({
       // No-op when the picked model is already the effective one — the session
       // override first, then the inherited agent model.
       if (nextModel.id === (sessionSnapshot?.model ?? activeModel?.id)) return
-      // The "don't ask again" pick still means agent-wide, as confirmed.
-      if (skipModelSwitchConfirmationsForAppRun) {
-        await updateModel({ agentId: activeAgent.id, modelId: nextModel.id }, { showSuccessToast: false })
+      // The "don't ask again" pick remembers the scope it was made for: an
+      // agent-scoped skip switches the agent's model, a session-scoped skip
+      // becomes a session override.
+      if (skipModelSwitchScope) {
+        if (skipModelSwitchScope === 'session' && sessionSnapshot) {
+          await updateSession({ id: sessionSnapshot.id, model: nextModel.id }, { showSuccessToast: false })
+        } else {
+          await updateModel({ agentId: activeAgent.id, modelId: nextModel.id }, { showSuccessToast: false })
+        }
         return
       }
       // An empty session has nothing at stake: record the pick as a
@@ -328,9 +335,8 @@ const AgentChat = ({
       activeAgent,
       activeModel?.id,
       sessionSnapshot,
-      sessionSnapshot?.model,
       isEmptyConversation,
-      skipModelSwitchConfirmationsForAppRun,
+      skipModelSwitchScope,
       updateModel,
       updateSession
     ]
@@ -594,8 +600,8 @@ const AgentChat = ({
         layout="stack"
         cancelVariant="destructive"
         // Secondary: the previous behavior — switch the agent's model for all
-        // its sessions. The skip checkbox only applies to this path. Outlined
-        // so the buttons stay visible without hover on the dark background.
+        // its sessions. Checking "don't ask again" here records an agent-scoped
+        // skip. Outlined so the buttons stay visible without hover.
         secondaryActionText={t('agent.session.model_switch_confirm.confirm_agent')}
         secondaryVariant="outline"
         onSecondaryAction={async () => {
@@ -612,7 +618,7 @@ const AgentChat = ({
             { showSuccessToast: false }
           )
           if (updatedAgent && skipModelSwitchConfirmation) {
-            setSkipModelSwitchConfirmationsForAppRun(true)
+            setSkipModelSwitchScope('agent')
           }
         }}
         // Extra: session-only switch, shown when the reset row owns the confirm slot.
@@ -628,6 +634,10 @@ const AgentChat = ({
                     { id: sessionSnapshot.id, model: modelSwitchTarget.model.id },
                     { showSuccessToast: false }
                   )
+                  // Checking "don't ask again" here records a session-scoped skip.
+                  if (skipModelSwitchConfirmation) {
+                    setSkipModelSwitchScope('session')
+                  }
                 }
               }
             : undefined
@@ -635,7 +645,8 @@ const AgentChat = ({
         extraVariant="outline"
         cancelText={t('common.cancel')}
         onConfirm={async () => {
-          // With an override, the confirm slot is the reset action.
+          // With an override, the confirm slot is the reset action — resets are
+          // never silenced, so they stay one explicit click away.
           if (sessionSnapshot?.model) {
             await updateSession({ id: sessionSnapshot.id, model: null }, { showSuccessToast: false })
             return
@@ -647,6 +658,10 @@ const AgentChat = ({
             { id: sessionSnapshot.id, model: modelSwitchTarget.model.id },
             { showSuccessToast: false }
           )
+          // Checking "don't ask again" here records a session-scoped skip.
+          if (skipModelSwitchConfirmation) {
+            setSkipModelSwitchScope('session')
+          }
         }}
       />
     </>
